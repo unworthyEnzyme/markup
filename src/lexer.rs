@@ -64,8 +64,7 @@ impl<'source> Lexer<'source> {
             '[' => Ok(Token::LeftBracket),
             ']' => Ok(Token::RightBracket),
             ':' => Ok(Token::Colon),
-            '\'' => Ok(self.string()?),
-            '"' => Ok(self.raw_string()?),
+            '"' => Ok(self.string()?),
             _ if c.is_alphabetic() => Ok(self.identifier()?),
             _ if c.is_numeric() => Ok(self.number()?),
             _ => Err(()),
@@ -73,10 +72,8 @@ impl<'source> Lexer<'source> {
     }
 
     fn string(&mut self) -> Result<Token, ()> {
-        todo!()
-    }
-
-    fn raw_string(&mut self) -> Result<Token, ()> {
+        self.advance();
+        let start = self.current;
         while self.peek() != '"' && !self.is_at_end() {
             self.advance();
         }
@@ -85,8 +82,7 @@ impl<'source> Lexer<'source> {
             return Err(());
         }
 
-        self.advance();
-        let value = &self.source[self.start + 1..self.current - 1];
+        let value = &self.source[start..self.current];
         Ok(Token::String(
             //There should be a better way
             std::str::from_utf8(value).expect("strings should be valid utf-8"),
@@ -144,5 +140,22 @@ mod tests {
         let mut lexer = Lexer::new(source.as_bytes());
         let token = lexer.number();
         assert_eq!(token, Ok(Token::Number(123)))
+    }
+
+    #[test]
+    fn string_literal() {
+        let source = r#""this is a string literal""#;
+        let mut lexer = Lexer::new(source.as_bytes());
+        let token = lexer.string();
+        assert_eq!(token, Ok(Token::String("this is a string literal")));
+    }
+
+    #[test]
+    fn multiline_string_literal() {
+        let source = r#""a multiline
+string literal""#;
+        let mut lexer = Lexer::new(source.as_bytes());
+        let token = lexer.string();
+        assert_eq!(token, Ok(Token::String("a multiline\nstring literal")))
     }
 }
