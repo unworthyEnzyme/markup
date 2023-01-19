@@ -40,20 +40,26 @@ impl<'a> Display for Token<'a> {
 #[derive(Debug)]
 pub struct Lexer<'source> {
     source: &'source [u8],
-    tokens: Vec<Token<'source>>,
     current: usize,
 }
 
 impl<'source> Lexer<'source> {
     pub fn new(source: &'source [u8]) -> Self {
-        Self {
-            source,
-            tokens: vec![],
-            current: 0,
-        }
+        Self { source, current: 0 }
     }
 
-    fn scan_token(&mut self, c: char) -> Result<Token, ()> {
+    pub fn scan_tokens(&mut self) -> Vec<Result<Token<'source>, ()>> {
+        let mut tokens = vec![];
+        while !self.is_at_end() {
+            let c = self.advance();
+            let token = self.scan_token(c);
+            tokens.push(token);
+        }
+        tokens.push(Ok(Token::EOF));
+        tokens
+    }
+
+    fn scan_token(&mut self, c: char) -> Result<Token<'source>, ()> {
         match c {
             '(' => Ok(Token::LeftParen),
             ')' => Ok(Token::RightParen),
@@ -63,13 +69,14 @@ impl<'source> Lexer<'source> {
             ']' => Ok(Token::RightBracket),
             ':' => Ok(Token::Colon),
             '"' => Ok(self.string()?),
+            _ if &self.source[self.current..self.current + 2] == b".." => Ok(Token::DoubleDot),
             _ if c.is_alphabetic() => Ok(self.identifier()?),
             _ if c.is_numeric() => Ok(self.number()?),
             _ => Err(()),
         }
     }
 
-    fn string(&mut self) -> Result<Token, ()> {
+    fn string(&mut self) -> Result<Token<'source>, ()> {
         self.advance();
         let start = self.current;
         while self.peek() != '"' && !self.is_at_end() {
@@ -87,7 +94,7 @@ impl<'source> Lexer<'source> {
         ))
     }
 
-    fn identifier(&mut self) -> Result<Token, ()> {
+    fn identifier(&mut self) -> Result<Token<'source>, ()> {
         let start = self.current;
         while is_alphabetic(self.peek()) {
             self.advance();
@@ -98,7 +105,7 @@ impl<'source> Lexer<'source> {
         ))
     }
 
-    fn number(&mut self) -> Result<Token, ()> {
+    fn number(&mut self) -> Result<Token<'source>, ()> {
         let start = self.current;
         while char::is_numeric(self.peek()) {
             self.advance();
@@ -142,6 +149,8 @@ fn is_alphabetic(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::{Lexer, Token};
 
     #[test]
@@ -175,5 +184,27 @@ string literal""#;
         let mut lexer = Lexer::new(source.as_bytes());
         let token = lexer.identifier();
         assert_eq!(token, Ok(Token::Identifier("js-code_block")));
+    }
+
+    #[test]
+    fn punctuation() {
+        let source = "(){}[],..:";
+        let mut lexer = Lexer::new(source.as_bytes());
+        let tokens = lexer.scan_tokens();
+        assert_eq!(
+            tokens,
+            vec![
+                Ok(Token::LeftParen),
+                Ok(Token::RightParen),
+                Ok(Token::LeftBrace),
+                Ok(Token::RightBrace),
+                Ok(Token::LeftBracket),
+                Ok(Token::RightBracket),
+                Ok(Token::Comma),
+                Ok(Token::DoubleDot),
+                Ok(Token::Colon),
+                Ok(Token::EOF)
+            ]
+        )
     }
 }
