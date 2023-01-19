@@ -1,4 +1,4 @@
-code-block(highlights: [1, 3..5], lang: 'ts') {
+code-block(highlights: [1, 3..5], lang: "ts") {
     "
         function add(a: number, b: number) {
             return a + b;
@@ -8,7 +8,7 @@ code-block(highlights: [1, 3..5], lang: 'ts') {
     "
 }
 
-h1 { 'My heading' }
+h1 { "My heading" }
 
 p {
     "
