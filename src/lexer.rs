@@ -87,8 +87,15 @@ impl<'source> Lexer<'source> {
         ))
     }
 
-    fn identifier(&self) -> Result<Token, ()> {
-        todo!()
+    fn identifier(&mut self) -> Result<Token, ()> {
+        let start = self.current;
+        while is_alphabetic(self.peek()) {
+            self.advance();
+        }
+        let lexeme = &self.source[start..self.current];
+        Ok(Token::Identifier(
+            std::str::from_utf8(lexeme).expect("should be valid utf-8"),
+        ))
     }
 
     fn number(&mut self) -> Result<Token, ()> {
@@ -129,6 +136,10 @@ impl<'source> Lexer<'source> {
     }
 }
 
+fn is_alphabetic(c: char) -> bool {
+    c.is_alphabetic() || c == '_' || c == '-'
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Lexer, Token};
@@ -156,5 +167,13 @@ string literal""#;
         let mut lexer = Lexer::new(source.as_bytes());
         let token = lexer.string();
         assert_eq!(token, Ok(Token::String("a multiline\nstring literal")))
+    }
+
+    #[test]
+    fn identifier() {
+        let source = "js-code_block";
+        let mut lexer = Lexer::new(source.as_bytes());
+        let token = lexer.identifier();
+        assert_eq!(token, Ok(Token::Identifier("js-code_block")));
     }
 }
