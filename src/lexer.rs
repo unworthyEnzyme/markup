@@ -41,7 +41,6 @@ impl<'a> Display for Token<'a> {
 pub struct Lexer<'source> {
     source: &'source [u8],
     tokens: Vec<Token<'source>>,
-    start: usize,
     current: usize,
 }
 
@@ -50,7 +49,6 @@ impl<'source> Lexer<'source> {
         Self {
             source,
             tokens: vec![],
-            start: 0,
             current: 0,
         }
     }
@@ -94,10 +92,11 @@ impl<'source> Lexer<'source> {
     }
 
     fn number(&mut self) -> Result<Token, ()> {
+        let start = self.current;
         while char::is_numeric(self.peek()) {
             self.advance();
         }
-        let lexeme = std::str::from_utf8(&self.source[self.start..self.current])
+        let lexeme = std::str::from_utf8(&self.source[start..self.current])
             .expect("This should be a valid utf-8");
         let value = lexeme.parse::<u32>().unwrap();
         Ok(Token::Number(value))
