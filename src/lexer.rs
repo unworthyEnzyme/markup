@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Token<'a> {
@@ -12,6 +13,7 @@ pub enum Token<'a> {
     LeftBrace,
     RightBrace,
     DoubleDot,
+    Dot,
     Comma,
     Colon,
     EOF,
@@ -30,12 +32,21 @@ impl<'a> Display for Token<'a> {
             Token::LeftBrace => write!(f, "`{{`"),
             Token::RightBrace => write!(f, "`}}`"),
             Token::DoubleDot => write!(f, ".."),
+            Token::Dot => write!(f, "."),
             Token::Comma => write!(f, ","),
             Token::Colon => write!(f, ":"),
             Token::EOF => write!(f, "\0"),
         }
     }
 }
+
+#[derive(Debug, Error, PartialEq, Eq, Clone, Copy)]
+pub enum LexingError {
+    #[error("Unrecognized Character {} at position {}", .character, .position)]
+    UnrecognizedCharacter { character: char, position: usize },
+}
+
+type LexingResult<'source> = Result<Token<'source>, LexingError>;
 
 #[derive(Debug)]
 pub struct Lexer<'source> {
@@ -48,7 +59,7 @@ impl<'source> Lexer<'source> {
         Self { source, current: 0 }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Result<Token<'source>, ()>> {
+    pub fn scan_tokens(&mut self) -> Vec<LexingResult<'source>> {
         let mut tokens = vec![];
         while !self.is_at_end() {
             let c = self.advance();
@@ -59,7 +70,7 @@ impl<'source> Lexer<'source> {
         tokens
     }
 
-    fn scan_token(&mut self, c: char) -> Result<Token<'source>, ()> {
+    fn scan_token(&mut self, c: char) -> LexingResult<'source> {
         match c {
             '(' => Ok(Token::LeftParen),
             ')' => Ok(Token::RightParen),
@@ -69,14 +80,18 @@ impl<'source> Lexer<'source> {
             ']' => Ok(Token::RightBracket),
             ':' => Ok(Token::Colon),
             '"' => Ok(self.string()?),
-            _ if &self.source[self.current..self.current + 2] == b".." => Ok(Token::DoubleDot),
+            '.' if self.peek_next() == '.' => Ok(Token::DoubleDot),
+            '.' => Ok(Token::Dot),
             _ if c.is_alphabetic() => Ok(self.identifier()?),
             _ if c.is_numeric() => Ok(self.number()?),
-            _ => Err(()),
+            c @ _ => Err(LexingError::UnrecognizedCharacter {
+                character: c,
+                position: self.current,
+            }),
         }
     }
 
-    fn string(&mut self) -> Result<Token<'source>, ()> {
+    fn string(&mut self) -> LexingResult<'source> {
         self.advance();
         let start = self.current;
         while self.peek() != '"' && !self.is_at_end() {
@@ -84,7 +99,10 @@ impl<'source> Lexer<'source> {
         }
 
         if self.is_at_end() {
-            return Err(());
+            return Err(LexingError::UnrecognizedCharacter {
+                character: self.peek(),
+                position: self.current,
+            });
         }
 
         let value = &self.source[start..self.current];
@@ -94,7 +112,7 @@ impl<'source> Lexer<'source> {
         ))
     }
 
-    fn identifier(&mut self) -> Result<Token<'source>, ()> {
+    fn identifier(&mut self) -> LexingResult<'source> {
         let start = self.current;
         while is_alphabetic(self.peek()) {
             self.advance();
@@ -105,7 +123,7 @@ impl<'source> Lexer<'source> {
         ))
     }
 
-    fn number(&mut self) -> Result<Token<'source>, ()> {
+    fn number(&mut self) -> LexingResult<'source> {
         let start = self.current;
         while char::is_numeric(self.peek()) {
             self.advance();
@@ -139,7 +157,7 @@ impl<'source> Lexer<'source> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
+        self.current >= self.source.len() - 1
     }
 }
 
