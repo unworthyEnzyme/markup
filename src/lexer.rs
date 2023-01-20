@@ -62,15 +62,15 @@ impl<'source> Lexer<'source> {
     pub fn scan_tokens(&mut self) -> Vec<LexingResult<'source>> {
         let mut tokens = vec![];
         while !self.is_at_end() {
-            let c = self.advance();
-            let token = self.scan_token(c);
+            let token = self.scan_token();
             tokens.push(token);
         }
         tokens.push(Ok(Token::EOF));
         tokens
     }
 
-    fn scan_token(&mut self, c: char) -> LexingResult<'source> {
+    fn scan_token(&mut self) -> LexingResult<'source> {
+        let c = self.advance();
         match c {
             '(' => Ok(Token::LeftParen),
             ')' => Ok(Token::RightParen),
@@ -79,9 +79,15 @@ impl<'source> Lexer<'source> {
             '[' => Ok(Token::LeftBracket),
             ']' => Ok(Token::RightBracket),
             ':' => Ok(Token::Colon),
+            ',' => Ok(Token::Comma),
             '"' => Ok(self.string()?),
-            '.' if self.peek_next() == '.' => Ok(Token::DoubleDot),
-            '.' => Ok(Token::Dot),
+            '.' => {
+                if self.match_char('.') {
+                    Ok(Token::DoubleDot)
+                } else {
+                    Ok(Token::Dot)
+                }
+            }
             _ if c.is_alphabetic() => Ok(self.identifier()?),
             _ if c.is_numeric() => Ok(self.number()?),
             c @ _ => Err(LexingError::UnrecognizedCharacter {
@@ -157,7 +163,16 @@ impl<'source> Lexer<'source> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.source.len() - 1
+        self.current >= self.source.len()
+    }
+
+    fn match_char(&mut self, c: char) -> bool {
+        if self.is_at_end() || self.source[self.current] as char != c {
+            false
+        } else {
+            self.current += 1;
+            true
+        }
     }
 }
 
@@ -170,6 +185,7 @@ mod tests {
     use std::vec;
 
     use super::{Lexer, Token};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn number_literal() {
