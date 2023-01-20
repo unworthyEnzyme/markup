@@ -140,13 +140,6 @@ impl<'source> Lexer<'source> {
         Ok(Token::Number(value))
     }
 
-    fn peek_next(&self) -> char {
-        if self.current + 1 != self.source.len() {
-            return self.source[self.current + 1].into();
-        }
-        '\0'
-    }
-
     fn peek(&self) -> char {
         if !self.is_at_end() {
             return self.source[self.current].into();
