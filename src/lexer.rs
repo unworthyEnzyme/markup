@@ -66,6 +66,11 @@ impl<'source> Lexer<'source> {
             let token = self.scan_token()?;
             tokens.push(token);
         }
+        if tokens.last() != Some(&Token::EOF) {
+            //if there is no whitespace after the last scanned token than we never call the scan token again so
+            //we don't call the `scan_token` and get `Token::EOF`
+            tokens.push(Token::EOF);
+        }
         Ok(tokens)
     }
 
@@ -88,6 +93,7 @@ impl<'source> Lexer<'source> {
             }
             ':' => Ok(Token::Colon),
             '\0' => Ok(Token::EOF),
+            _ if c.is_numeric() => Ok(self.number()?),
             _ => Err(LexingError::UnrecognizedCharacter {
                 character: c,
                 position: self.current,
@@ -104,7 +110,16 @@ impl<'source> Lexer<'source> {
     }
 
     fn number(&mut self) -> LexingResult<'source> {
-        todo!()
+        let start = self.current - 1;
+        while self.peek().is_numeric() {
+            self.advance();
+        }
+        let lexeme =
+            std::str::from_utf8(&self.source[start..self.current]).expect("Should be utf8");
+        let num: u32 = lexeme
+            .parse()
+            .expect(&format!("'{}' should be valid number", lexeme));
+        Ok(Token::Number(num))
     }
 
     fn peek(&self) -> char {
@@ -155,12 +170,12 @@ mod tests {
     use super::{Lexer, Token};
     use pretty_assertions::assert_eq;
 
-    // #[test]
+    #[test]
     fn number_literal() {
         let source = "123";
         let mut lexer = Lexer::new(source.as_bytes());
-        let token = lexer.number();
-        assert_eq!(token, Ok(Token::Number(123)))
+        let token = lexer.scan_tokens();
+        assert_eq!(token, Ok(vec![Token::Number(123), Token::EOF]));
     }
 
     // #[test]
