@@ -44,6 +44,8 @@ impl<'a> Display for Token<'a> {
 pub enum LexingError {
     #[error("Unrecognized Character {} at position {}", .character, .position)]
     UnrecognizedCharacter { character: char, position: usize },
+    #[error("Unclosed string literal at start: {} end: {}", .start, .end)]
+    UnclosedStringLiteral { start: usize, end: usize },
 }
 
 type LexingResult<'source> = Result<Token<'source>, LexingError>;
@@ -93,7 +95,9 @@ impl<'source> Lexer<'source> {
             }
             ':' => Ok(Token::Colon),
             '\0' => Ok(Token::EOF),
+            '"' => Ok(self.string()?),
             _ if c.is_numeric() => Ok(self.number()?),
+            _ if c.is_alphabetic() => Ok(self.identifier()?),
             _ => Err(LexingError::UnrecognizedCharacter {
                 character: c,
                 position: self.current,
@@ -102,11 +106,30 @@ impl<'source> Lexer<'source> {
     }
 
     fn string(&mut self) -> LexingResult<'source> {
-        todo!()
+        let start = self.current;
+        while !self.is_at_end() && self.peek() != '"' {
+            self.advance();
+        }
+        if self.is_at_end() {
+            return Err(LexingError::UnclosedStringLiteral {
+                start: start - 1,
+                end: self.current,
+            });
+        }
+        let inner = std::str::from_utf8(&self.source[start..self.current]).expect("should be utf8");
+        //eat closing quote
+        self.advance();
+        Ok(Token::String(inner))
     }
 
     fn identifier(&mut self) -> LexingResult<'source> {
-        todo!()
+        let start = self.current - 1;
+        while is_alphabetic(self.peek()) {
+            self.advance();
+        }
+        let lexeme =
+            std::str::from_utf8(&self.source[start..self.current]).expect("should be utf8");
+        Ok(Token::Identifier(lexeme))
     }
 
     fn number(&mut self) -> LexingResult<'source> {
@@ -167,7 +190,7 @@ fn is_alphabetic(c: char) -> bool {
 mod tests {
     use std::vec;
 
-    use super::{Lexer, Token};
+    use super::{Lexer, LexingError, Token};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -178,29 +201,55 @@ mod tests {
         assert_eq!(token, Ok(vec![Token::Number(123), Token::EOF]));
     }
 
-    // #[test]
+    #[test]
     fn string_literal() {
         let source = r#""this is a string literal""#;
         let mut lexer = Lexer::new(source.as_bytes());
-        let token = lexer.string();
-        assert_eq!(token, Ok(Token::String("this is a string literal")));
+        let token = lexer.scan_tokens();
+        assert_eq!(
+            token,
+            Ok(vec![Token::String("this is a string literal"), Token::EOF])
+        );
     }
 
-    // #[test]
+    #[test]
+    fn unclosed_string_literal() {
+        let source = r#""unclosed string"#;
+        let mut lexer = Lexer::new(source.as_bytes());
+        let tokens = lexer.scan_tokens();
+        assert_eq!(
+            tokens,
+            Err(LexingError::UnclosedStringLiteral {
+                start: 0,
+                end: lexer.current
+            })
+        )
+    }
+
+    #[test]
     fn multiline_string_literal() {
         let source = r#""a multiline
 string literal""#;
         let mut lexer = Lexer::new(source.as_bytes());
-        let token = lexer.string();
-        assert_eq!(token, Ok(Token::String("a multiline\nstring literal")))
+        let token = lexer.scan_tokens();
+        assert_eq!(
+            token,
+            Ok(vec![
+                Token::String("a multiline\nstring literal"),
+                Token::EOF
+            ])
+        )
     }
 
-    // #[test]
+    #[test]
     fn identifier() {
         let source = "js-code_block";
         let mut lexer = Lexer::new(source.as_bytes());
-        let token = lexer.identifier();
-        assert_eq!(token, Ok(Token::Identifier("js-code_block")));
+        let token = lexer.scan_tokens();
+        assert_eq!(
+            token,
+            Ok(vec![Token::Identifier("js-code_block"), Token::EOF])
+        );
     }
 
     #[test]
