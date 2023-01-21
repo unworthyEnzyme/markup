@@ -98,7 +98,6 @@ impl<'source> Lexer<'source> {
     }
 
     fn string(&mut self) -> LexingResult<'source> {
-        self.advance();
         let start = self.current;
         while self.peek() != '"' && !self.is_at_end() {
             self.advance();
@@ -130,7 +129,7 @@ impl<'source> Lexer<'source> {
     }
 
     fn number(&mut self) -> LexingResult<'source> {
-        let start = self.current;
+        let start = self.current - 1;
         while char::is_numeric(self.peek()) {
             self.advance();
         }
