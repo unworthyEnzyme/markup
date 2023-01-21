@@ -183,7 +183,7 @@ impl<'source> Lexer<'source> {
 }
 
 fn is_alphabetic(c: char) -> bool {
-    c.is_alphabetic() || c == '_' || c == '-'
+    c.is_alphabetic() || c == '_' || c == '-' || c.is_numeric()
 }
 
 #[cfg(test)]
