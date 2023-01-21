@@ -62,10 +62,10 @@ impl<'source> Lexer<'source> {
     pub fn scan_tokens(&mut self) -> Result<Vec<Token<'source>>, LexingError> {
         let mut tokens = vec![];
         while !self.is_at_end() {
+            self.skip_whitespace();
             let token = self.scan_token()?;
             tokens.push(token);
         }
-        tokens.push(Token::EOF);
         Ok(tokens)
     }
 
@@ -87,6 +87,7 @@ impl<'source> Lexer<'source> {
                 }
             }
             ':' => Ok(Token::Colon),
+            '\0' => Ok(Token::EOF),
             _ => Err(LexingError::UnrecognizedCharacter {
                 character: c,
                 position: self.current,
@@ -107,12 +108,20 @@ impl<'source> Lexer<'source> {
     }
 
     fn peek(&self) -> char {
-        self.source[self.current].into()
+        if self.is_at_end() {
+            '\0'
+        } else {
+            self.source[self.current].into()
+        }
     }
 
     fn advance(&mut self) -> char {
-        self.current += 1;
-        self.source[self.current - 1].into()
+        if self.is_at_end() {
+            '\0'
+        } else {
+            self.current += 1;
+            self.source[self.current - 1].into()
+        }
     }
 
     fn is_at_end(&self) -> bool {
@@ -125,6 +134,12 @@ impl<'source> Lexer<'source> {
         } else {
             self.current += 1;
             true
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while !self.is_at_end() && self.peek().is_whitespace() {
+            self.advance();
         }
     }
 }
@@ -175,7 +190,7 @@ string literal""#;
 
     #[test]
     fn punctuation() {
-        let source = "(){}[],..:";
+        let source = " ( ){}[ ] , ..: ";
         let mut lexer = Lexer::new(source.as_bytes());
         let tokens = lexer.scan_tokens();
         assert_eq!(
