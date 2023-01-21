@@ -60,111 +60,39 @@ impl<'source> Lexer<'source> {
     }
 
     pub fn scan_tokens(&mut self) -> Vec<LexingResult<'source>> {
-        let mut tokens = vec![];
-        while !self.is_at_end() {
-            let token = self.scan_token();
-            tokens.push(token);
-        }
-        tokens.push(Ok(Token::EOF));
-        tokens
+        todo!()
     }
 
     fn scan_token(&mut self) -> LexingResult<'source> {
-        let c = self.advance();
-        match c {
-            '(' => Ok(Token::LeftParen),
-            ')' => Ok(Token::RightParen),
-            '{' => Ok(Token::LeftBrace),
-            '}' => Ok(Token::RightBrace),
-            '[' => Ok(Token::LeftBracket),
-            ']' => Ok(Token::RightBracket),
-            ':' => Ok(Token::Colon),
-            ',' => Ok(Token::Comma),
-            '"' => Ok(self.string()?),
-            '.' => {
-                if self.match_char('.') {
-                    Ok(Token::DoubleDot)
-                } else {
-                    Ok(Token::Dot)
-                }
-            }
-            _ if c.is_alphabetic() => Ok(self.identifier()?),
-            _ if c.is_numeric() => Ok(self.number()?),
-            c @ _ => Err(LexingError::UnrecognizedCharacter {
-                character: c,
-                position: self.current,
-            }),
-        }
+        todo!()
     }
 
     fn string(&mut self) -> LexingResult<'source> {
-        let start = self.current;
-        while self.peek() != '"' && !self.is_at_end() {
-            self.advance();
-        }
-
-        if self.is_at_end() {
-            return Err(LexingError::UnrecognizedCharacter {
-                character: self.peek(),
-                position: self.current,
-            });
-        }
-
-        let value = &self.source[start..self.current];
-        Ok(Token::String(
-            //There should be a better way
-            std::str::from_utf8(value).expect("strings should be valid utf-8"),
-        ))
+        todo!()
     }
 
     fn identifier(&mut self) -> LexingResult<'source> {
-        let start = self.current;
-        while is_alphabetic(self.peek()) {
-            self.advance();
-        }
-        let lexeme = &self.source[start..self.current];
-        Ok(Token::Identifier(
-            std::str::from_utf8(lexeme).expect("should be valid utf-8"),
-        ))
+        todo!()
     }
 
     fn number(&mut self) -> LexingResult<'source> {
-        let start = self.current - 1;
-        while char::is_numeric(self.peek()) {
-            self.advance();
-        }
-        let lexeme = std::str::from_utf8(&self.source[start..self.current])
-            .expect("This should be a valid utf-8");
-        let value = lexeme.parse::<u32>().unwrap();
-        Ok(Token::Number(value))
+        todo!()
     }
 
     fn peek(&self) -> char {
-        if !self.is_at_end() {
-            return self.source[self.current].into();
-        }
-        '\0'
+        todo!()
     }
 
     fn advance(&mut self) -> char {
-        if !self.is_at_end() {
-            self.current += 1;
-            return self.source[self.current - 1].into();
-        }
-        '\0'
+        todo!()
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
+        todo!()
     }
 
     fn match_char(&mut self, c: char) -> bool {
-        if self.is_at_end() || self.source[self.current] as char != c {
-            false
-        } else {
-            self.current += 1;
-            true
-        }
+        todo!()
     }
 }
 
