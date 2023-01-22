@@ -1,8 +1,11 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Node<'source> {
-    tag: &'source str,
-    attributes: Vec<Attribute<'source>>,
-    children: Vec<Node<'source>>,
+pub enum Node<'source> {
+    Tag {
+        name: &'source str,
+        attributes: Vec<Attribute<'source>>,
+        children: Vec<Node<'source>>,
+    },
+    String(&'source str),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
