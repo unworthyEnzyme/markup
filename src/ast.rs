@@ -22,5 +22,5 @@ pub enum Literal<'source> {
     Number(u32),
     String(&'source str),
     List(Vec<Literal<'source>>),
-    Range { start: u32, end: u32 },
+    Range { start: u32, end: Option<u32> },
 }
