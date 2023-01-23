@@ -13,8 +13,8 @@ pub enum Node<'source> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attribute<'source> {
-    name: &'source str,
-    value: Literal<'source>,
+    pub(crate) name: &'source str,
+    pub(crate) value: Literal<'source>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
