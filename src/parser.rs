@@ -67,12 +67,16 @@ impl<'a> Parser<'a> {
                 self.current += 1;
                 Ok(Node::String(s))
             }
-            Token::Identifier(i) => self.tag(i),
+            Token::Identifier(_) => self.tag(),
             _ => Err(ParsingError::UnexpectedToken { at: self.current }),
         }
     }
 
-    fn tag(&mut self, name: &'a str) -> Result<Node<'a>, ParsingError<'a>> {
+    fn tag(&mut self) -> Result<Node<'a>, ParsingError<'a>> {
+        let Token::Identifier(name) = self.tokens[self.current] else {
+            return Err(ParsingError::UnexpectedToken { at: self.current });
+        };
+        self.current += 1;
         let mut node = Tag {
             name,
             attributes: vec![],
@@ -84,7 +88,9 @@ impl<'a> Parser<'a> {
         }
 
         self.consume(Token::LeftBrace)?;
-        //parse child nodes
+        while self.tokens[self.current] != Token::RightBrace {
+            node.children.push(self.node()?);
+        }
         self.consume(Token::RightBrace)?;
         Ok(Node::Tag(node))
     }
@@ -225,8 +231,10 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use crate::{
-        ast::{Attribute, Literal},
+        ast::{Attribute, Literal, Node, Tag},
         lexer::Lexer,
     };
     use pretty_assertions::assert_eq;
@@ -354,6 +362,62 @@ mod tests {
                     value: Literal::Number(123)
                 }
             ])
+        )
+    }
+
+    #[test]
+    fn node() {
+        let source = r#"
+row(reversed: "true") {
+    p { "first" }
+    "second"
+}"#;
+        let mut parser = init_parser(source);
+        let ast = parser.node();
+        assert_eq!(
+            ast,
+            Ok(Node::Tag(Tag {
+                name: "row",
+                attributes: vec![Attribute {
+                    name: "reversed",
+                    value: Literal::String("true")
+                }],
+                children: vec![
+                    Node::Tag(Tag {
+                        name: "p",
+                        attributes: vec![],
+                        children: vec![Node::String("first")]
+                    }),
+                    Node::String("second")
+                ]
+            }))
+        )
+    }
+
+    #[test]
+    fn markup() {
+        let source = r#"
+p {"first"}
+div {"second"}
+"third"
+"#;
+        let mut parser = Parser::new();
+        let ast = parser.parse(source.as_bytes()).unwrap();
+        assert_eq!(
+            ast,
+            vec![
+                Node::Tag(Tag {
+                    name: "p",
+                    attributes: vec![],
+                    children: vec![Node::String("first")]
+                }),
+                Node::Tag(Tag {
+                    name: "div",
+                    attributes: vec![],
+                    children: vec![Node::String("second")]
+                }),
+                Node::String("third")
+            ]
         )
     }
 }
