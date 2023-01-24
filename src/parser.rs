@@ -89,28 +89,6 @@ impl<'a> Parser<'a> {
         Ok(Node::Tag(node))
     }
 
-    fn is_at_end(&self) -> bool {
-        self.tokens[self.current] == Token::EOF
-    }
-
-    fn advance(&mut self) -> Token<'a> {
-        self.current += 1;
-        self.tokens[self.current - 1]
-    }
-
-    fn consume(&mut self, token: Token<'a>) -> Result<(), ParsingError<'a>> {
-        if self.tokens[self.current] == token {
-            self.current += 1;
-            Ok(())
-        } else {
-            Err(ParsingError::ExpectedToken {
-                at: self.current,
-                expected: token,
-                got: self.tokens[self.current],
-            })
-        }
-    }
-
     fn attributes(&mut self) -> Result<Vec<Attribute<'a>>, ParsingError<'a>> {
         let mut attrs: Vec<Attribute<'a>> = vec![];
         while self.tokens[self.current] != Token::RightParen || !self.is_at_end() {
@@ -172,10 +150,6 @@ impl<'a> Parser<'a> {
         Ok(Literal::List(items))
     }
 
-    fn peek_next(&self) -> Token<'a> {
-        self.tokens[self.current + 1]
-    }
-
     fn range(&mut self) -> Result<Literal<'a>, ParsingError<'a>> {
         let Token::Number(start) = self.tokens[self.current] else {
             return Err(ParsingError::UnexpectedToken { at: self.current });
@@ -211,6 +185,32 @@ impl<'a> Parser<'a> {
             _ => Err(ParsingError::UnexpectedToken { at: self.current }),
         }
     }
+
+    fn is_at_end(&self) -> bool {
+        self.tokens[self.current] == Token::EOF
+    }
+
+    fn advance(&mut self) -> Token<'a> {
+        self.current += 1;
+        self.tokens[self.current - 1]
+    }
+
+    fn consume(&mut self, token: Token<'a>) -> Result<(), ParsingError<'a>> {
+        if self.tokens[self.current] == token {
+            self.current += 1;
+            Ok(())
+        } else {
+            Err(ParsingError::ExpectedToken {
+                at: self.current,
+                expected: token,
+                got: self.tokens[self.current],
+            })
+        }
+    }
+
+    fn peek_next(&self) -> Token<'a> {
+        self.tokens[self.current + 1]
+    }
 }
 
 #[cfg(test)]
@@ -220,13 +220,18 @@ mod tests {
 
     use super::Parser;
 
-    #[test]
-    fn range() {
-        let source = "1..10";
+    fn init_parser(source: &str) -> Parser {
         let mut lexer = Lexer::new(source.as_bytes());
         let tokens = lexer.scan_tokens().unwrap();
         let mut parser = Parser::new();
         parser.tokens = tokens;
+        parser
+    }
+
+    #[test]
+    fn range() {
+        let source = "1..10";
+        let mut parser = init_parser(source);
         let ast = parser.range();
         assert_eq!(
             ast,
@@ -240,10 +245,7 @@ mod tests {
     #[test]
     fn open_range() {
         let source = "1..";
-        let mut lexer = Lexer::new(source.as_bytes());
-        let tokens = lexer.scan_tokens().unwrap();
-        let mut parser = Parser::new();
-        parser.tokens = tokens;
+        let mut parser = init_parser(source);
         let ast = parser.range();
         assert_eq!(
             ast,
@@ -257,10 +259,7 @@ mod tests {
     #[test]
     fn list() {
         let source = r#"[1, 1..3, "string"]"#;
-        let mut lexer = Lexer::new(source.as_bytes());
-        let tokens = lexer.scan_tokens().unwrap();
-        let mut parser = Parser::new();
-        parser.tokens = tokens;
+        let mut parser = init_parser(source);
         let ast = parser.list();
         assert_eq!(
             ast,
@@ -278,10 +277,7 @@ mod tests {
     #[test]
     fn nested_list() {
         let source = "[1, 1..3, [1, 1..3]]";
-        let mut lexer = Lexer::new(source.as_bytes());
-        let tokens = lexer.scan_tokens().unwrap();
-        let mut parser = Parser::new();
-        parser.tokens = tokens;
+        let mut parser = init_parser(source);
         let ast = parser.list();
         assert_eq!(
             ast,
