@@ -90,10 +90,18 @@ impl<'a> Parser<'a> {
     }
 
     fn attributes(&mut self) -> Result<Vec<Attribute<'a>>, ParsingError<'a>> {
+        self.consume(Token::LeftParen)?;
         let mut attrs: Vec<Attribute<'a>> = vec![];
-        while self.tokens[self.current] != Token::RightParen || !self.is_at_end() {
+        //This is similar to parsing lists except we call `self.attribute()` instead of `self.literal()`
+        //Maybe i can extract the logic of surrounded and delimited grammars.
+        if let Ok(attr) = self.attribute() {
+            attrs.push(attr);
+        }
+        while self.tokens[self.current] == Token::Comma {
+            self.current += 1;
             attrs.push(self.attribute()?);
         }
+
         self.consume(Token::RightParen)?;
         Ok(attrs)
     }
@@ -320,6 +328,32 @@ mod tests {
                     }
                 ])
             })
+        )
+    }
+
+    #[test]
+    fn attributes() {
+        let source = "(name: [1, 1..3], num: 123)";
+        let mut parser = init_parser(source);
+        let ast = parser.attributes();
+        assert_eq!(
+            ast,
+            Ok(vec![
+                Attribute {
+                    name: "name",
+                    value: Literal::List(vec![
+                        Literal::Number(1),
+                        Literal::Range {
+                            start: 1,
+                            end: Some(3)
+                        }
+                    ])
+                },
+                Attribute {
+                    name: "num",
+                    value: Literal::Number(123)
+                }
+            ])
         )
     }
 }
