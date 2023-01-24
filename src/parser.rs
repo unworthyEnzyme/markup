@@ -132,16 +132,20 @@ impl<'a> Parser<'a> {
                         value: self.range()?,
                     })
                 } else {
+                    self.current += 1;
                     Ok(Attribute {
                         name,
                         value: Literal::Number(n),
                     })
                 }
             }
-            Token::String(s) => Ok(Attribute {
-                name,
-                value: Literal::String(s),
-            }),
+            Token::String(s) => {
+                self.current += 1;
+                Ok(Attribute {
+                    name,
+                    value: Literal::String(s),
+                })
+            }
             Token::LeftBracket => Ok(Attribute {
                 name,
                 value: self.list()?,
@@ -150,8 +154,22 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn list(&self) -> Result<Literal<'a>, ParsingError<'a>> {
-        todo!()
+    fn list(&mut self) -> Result<Literal<'a>, ParsingError<'a>> {
+        let mut items: Vec<Literal<'a>> = vec![];
+        self.consume(Token::LeftBracket)?;
+        //Because the non-terminal is `list ::= '[' (literal (',' literal))? ']'` like this
+        //we first take the first literal and as long as we have a ',' we parse the others in
+        //the while loop.
+        if let Ok(l) = self.literal() {
+            items.push(l);
+        }
+        while self.tokens[self.current] == Token::Comma {
+            self.current += 1;
+            items.push(self.literal()?);
+        }
+
+        self.consume(Token::RightBracket)?;
+        Ok(Literal::List(items))
     }
 
     fn peek_next(&self) -> Token<'a> {
@@ -165,12 +183,32 @@ impl<'a> Parser<'a> {
         self.current += 1;
         self.consume(Token::DoubleDot)?;
         if let Token::Number(end) = self.tokens[self.current] {
+            self.current += 1;
             Ok(Literal::Range {
                 start,
                 end: Some(end),
             })
         } else {
             Ok(Literal::Range { start, end: None })
+        }
+    }
+
+    fn literal(&mut self) -> Result<Literal<'a>, ParsingError<'a>> {
+        match self.tokens[self.current] {
+            Token::Number(n) => {
+                if self.peek_next() == Token::DoubleDot {
+                    Ok(self.range()?)
+                } else {
+                    self.current += 1;
+                    Ok(Literal::Number(n))
+                }
+            }
+            Token::String(s) => {
+                self.current += 1;
+                Ok(Literal::String(s))
+            }
+            Token::LeftBracket => Ok(self.list()?),
+            _ => Err(ParsingError::UnexpectedToken { at: self.current }),
         }
     }
 }
@@ -213,6 +251,54 @@ mod tests {
                 start: 1,
                 end: None
             })
+        )
+    }
+
+    #[test]
+    fn list() {
+        let source = r#"[1, 1..3, "string"]"#;
+        let mut lexer = Lexer::new(source.as_bytes());
+        let tokens = lexer.scan_tokens().unwrap();
+        let mut parser = Parser::new();
+        parser.tokens = tokens;
+        let ast = parser.list();
+        assert_eq!(
+            ast,
+            Ok(Literal::List(vec![
+                Literal::Number(1),
+                Literal::Range {
+                    start: 1,
+                    end: Some(3)
+                },
+                Literal::String("string")
+            ],))
+        )
+    }
+
+    #[test]
+    fn nested_list() {
+        let source = "[1, 1..3, [1, 1..3]]";
+        let mut lexer = Lexer::new(source.as_bytes());
+        let tokens = lexer.scan_tokens().unwrap();
+        let mut parser = Parser::new();
+        parser.tokens = tokens;
+        let ast = parser.list();
+        assert_eq!(
+            ast,
+            Ok(Literal::List(vec![
+                Literal::Number(1),
+                Literal::Range {
+                    start: 1,
+                    end: Some(3)
+                },
+                Literal::List(vec![
+                    Literal::Number(1),
+                    Literal::Range {
+                        start: 1,
+                        end: Some(3)
+                    },
+                ])
+            ],))
         )
     }
 }
