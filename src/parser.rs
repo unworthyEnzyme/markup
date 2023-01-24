@@ -79,7 +79,7 @@ impl<'a> Parser<'a> {
             children: vec![],
         };
 
-        if let Token::RightParen = self.tokens[self.current] {
+        if let Token::LeftParen = self.tokens[self.current] {
             node.attributes = self.attributes()?;
         }
 
@@ -102,6 +102,8 @@ impl<'a> Parser<'a> {
         let Token::Identifier(name) = self.tokens[self.current] else {
             return Err(ParsingError::UnexpectedToken { at: self.current });
         };
+        self.current += 1;
+        self.consume(Token::Colon)?;
         match self.tokens[self.current] {
             Token::Number(n) => {
                 if self.peek_next() == Token::DoubleDot {
@@ -215,7 +217,10 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::Literal, lexer::Lexer};
+    use crate::{
+        ast::{Attribute, Literal},
+        lexer::Lexer,
+    };
     use pretty_assertions::assert_eq;
 
     use super::Parser;
@@ -295,6 +300,26 @@ mod tests {
                     },
                 ])
             ],))
+        )
+    }
+
+    #[test]
+    fn attribute() {
+        let source = "name: [1, 1..3]";
+        let mut parser = init_parser(source);
+        let ast = parser.attribute();
+        assert_eq!(
+            ast,
+            Ok(Attribute {
+                name: "name",
+                value: Literal::List(vec![
+                    Literal::Number(1),
+                    Literal::Range {
+                        start: 1,
+                        end: Some(3)
+                    }
+                ])
+            })
         )
     }
 }
