@@ -141,7 +141,7 @@ impl<'source> Lexer<'source> {
             std::str::from_utf8(&self.source[start..self.current]).expect("Should be utf8");
         let num: u32 = lexeme
             .parse()
-            .expect(&format!("'{}' should be valid number", lexeme));
+            .unwrap_or_else(|_| panic!("'{lexeme}' should be valid number"));
         Ok(Token::Number(num))
     }
 

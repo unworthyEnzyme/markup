@@ -43,6 +43,12 @@ pub struct Parser<'source> {
     current: usize,
 }
 
+impl<'a> Default for Parser<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> Parser<'a> {
     pub fn new() -> Self {
         Self {
@@ -205,12 +211,6 @@ impl<'a> Parser<'a> {
     fn is_at_end(&self) -> bool {
         self.tokens[self.current] == Token::EOF
     }
-
-    fn advance(&mut self) -> Token<'a> {
-        self.current += 1;
-        self.tokens[self.current - 1]
-    }
-
     fn consume(&mut self, token: Token<'a>) -> Result<(), ParsingError<'a>> {
         if self.tokens[self.current] == token {
             self.current += 1;
@@ -231,8 +231,6 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use crate::{
         ast::{Attribute, Literal, Node, Tag},
         lexer::Lexer,
