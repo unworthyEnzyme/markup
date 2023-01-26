@@ -1,10 +1,12 @@
-use std::fs;
-
-use markup::parser::Parser;
+use markup::{
+    parser::Parser,
+    plugin::{HtmlTransformer, Transformer},
+};
 
 fn main() {
-    let source = fs::read_to_string("source.txt").unwrap();
+    let source = r#""this is a string node""#;
     let node = Parser::new().parse(source.as_bytes()).unwrap();
-    let serialized = serde_json::to_string_pretty(&node).unwrap();
-    fs::write("source.json", &serialized).unwrap();
+    let mut transformer = HtmlTransformer::new(&node);
+    let transformed = transformer.transform();
+    println!("{transformed:?}");
 }
