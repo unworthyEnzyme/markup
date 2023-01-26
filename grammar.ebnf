@@ -1,15 +1,15 @@
-source ::= node*;
+source = node*;
 
-node ::= STRING | tag;
+node = STRING | tag;
 
-tag ::= IDENTIFIER ( '(' attributes ')' )? '{' node* '}';
+tag = IDENTIFIER ( '(' attributes ')' )? '{' node* '}';
 
-attributes ::= attribute (',' attribute)*;
+attributes = attribute (',' attribute)*;
 
-attribute ::= IDENTIFIER ':' literal;
+attribute = IDENTIFIER ':' literal;
 
-literal ::= NUMBER | STRING | list | range;
+literal = NUMBER | STRING | list | range;
 
-list ::= '[' (literal (',' literal))? ']';
+list = '[' (literal (',' literal))? ']';
 
-range ::= NUMBER '..' NUMBER?;
+range = NUMBER '..' NUMBER?;
