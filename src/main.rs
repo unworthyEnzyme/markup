@@ -4,9 +4,13 @@ use markup::{
 };
 
 fn main() {
-    let source = r#""this is a string node""#;
+    let source = r#"
+div {
+    div {"item1"}
+    div {"item2"}
+}
+    "#;
     let node = Parser::new().parse(source.as_bytes()).unwrap();
-    let mut transformer = HtmlTransformer::new(&node);
-    let transformed = transformer.transform();
-    println!("{transformed:?}");
+    let transformed = HtmlTransformer.transform(&node);
+    println!("{}", transformed);
 }
