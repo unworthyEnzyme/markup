@@ -1,6 +1,5 @@
-use std::thread::panicking;
-
 use crate::ast::Node;
+use textwrap;
 
 pub trait Transformer<'a> {
     type Item;
@@ -30,6 +29,7 @@ fn transform_node(node: &Node) -> String {
                 s.push_str("<pre>");
                 let mut transformer = HtmlTransformer;
                 let inner = transformer.transform(&t.children);
+                let inner = textwrap::dedent(&inner);
                 s.push_str(&format!("<code>{}</code></pre>", inner));
                 s
             } else {
