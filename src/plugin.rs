@@ -1,3 +1,5 @@
+use std::thread::panicking;
+
 use crate::ast::Node;
 
 pub trait Transformer<'a> {
@@ -23,12 +25,16 @@ fn transform_node(node: &Node) -> String {
     match node {
         Node::String(s) => String::from(*s),
         Node::Tag(t) => {
-            let mut s = String::new();
-            s.push_str(&format!("<{}>", t.name));
-            let mut transformer = HtmlTransformer;
-            let inner = transformer.transform(&t.children);
-            s.push_str(&format!("{}</{}>", &inner, t.name));
-            s
+            if t.name == "code-block" {
+                let mut s = String::new();
+                s.push_str("<pre>");
+                let mut transformer = HtmlTransformer;
+                let inner = transformer.transform(&t.children);
+                s.push_str(&format!("<code>{}</code></pre>", inner));
+                s
+            } else {
+                panic!("Only `code-block` is supported for now")
+            }
         }
     }
 }
