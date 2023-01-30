@@ -1,6 +1,7 @@
 use std::fs;
 
 use markup::{
+    ast::Literal,
     parser::Parser,
     plugin::{HtmlTransformer, Transformer},
 };

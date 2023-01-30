@@ -30,7 +30,16 @@ fn transform_node(node: &Node) -> String {
                 let mut transformer = HtmlTransformer;
                 let inner = transformer.transform(&t.children);
                 let inner = textwrap::dedent(&inner);
-                s.push_str(&format!("<code>{}</code></pre>", inner));
+                let attributes = t
+                    .attributes
+                    .iter()
+                    .map(|attr| (attr.name.to_string(), format!("{}", attr.value)))
+                    .map(|(name, value)| format!("{}=\"{}\"", name, value))
+                    .fold(String::new(), |mut acc, pair| {
+                        acc.push_str(&pair);
+                        acc
+                    });
+                s.push_str(&format!("<code {}>{}</code></pre>", attributes, inner));
                 s
             } else {
                 panic!("Only `code-block` is supported for now")
