@@ -18,23 +18,8 @@ pub enum ParsingError<'a> {
         expected: Token<'a>,
         got: Token<'a>,
     },
-}
-
-impl<'a> From<LexingError> for ParsingError<'a> {
-    fn from(value: LexingError) -> Self {
-        match value {
-            LexingError::UnclosedStringLiteral { start, end } => {
-                Self::UnclosedStringLiteral { start, end }
-            }
-            LexingError::UnrecognizedCharacter {
-                character,
-                position,
-            } => Self::UnrecognizedCharacter {
-                character,
-                position,
-            },
-        }
-    }
+    #[error("Lexing error")]
+    LexingError(#[from] LexingError),
 }
 
 #[derive(Debug, Clone)]
